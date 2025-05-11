@@ -39,7 +39,7 @@ function parseDate(row) {
     return parseInt(digits, 10);
   });
   return {
-    year,
+    year: year + 2000,
     month,
     day,
   };
@@ -112,7 +112,7 @@ export function parseTidalEvents(table) {
   /** @type {TidalEvent[]} */
   const extrema = [];
 
-  const rows = table.split("\n");
+  const rows = table.split("\n").filter((row) => row.length > 0);
   for (let row of rows) {
     const { year, month, day } = parseDate(row);
     const stationCode = parseStationCode(row);
@@ -126,7 +126,7 @@ export function parseTidalEvents(table) {
     });
 
     // Parse high tide events
-    parseExtrema(row, 80).forEach(({ hour, minute, level }) => {
+    parseExtrema(row, 80).forEach(({ hour, minute, level }, index) => {
       const localDateTime = { year, month, day, hour, minute };
       /** @type {TidalEvent} */
       const extremum = {
@@ -140,7 +140,7 @@ export function parseTidalEvents(table) {
     });
 
     // Parse low tide events
-    parseExtrema(row, 108).forEach(({ hour, minute, level }) => {
+    parseExtrema(row, 108).forEach(({ hour, minute, level }, index) => {
       const localDateTime = { year, month, day, hour, minute };
       /** @type {TidalEvent} */
       const extremum = {
