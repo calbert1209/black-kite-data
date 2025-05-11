@@ -71,6 +71,54 @@ export class Database {
     `);
   }
 
+  /**
+   * Creates the tidal_event table if it does not already exist.
+   * @returns {Promise<void>} A promise that resolves when the table is created.
+   */
+  async createTidalEventTable() {
+    return this.#db.exec(`
+        CREATE TABLE IF NOT EXISTS tidal_event (
+          id TEXT PRIMARY KEY,
+          station_code TEXT,
+          local_date_time TEXT,
+          utc_date_time TEXT,
+          level INTEGER,
+          type TEXT,
+          FOREIGN KEY (station_id) REFERENCES tide_station (id)
+        );
+      `);
+  }
+
+  /**
+   * @typedef {Object} EventRelations
+   * @property {string} id
+   * @property {string} stationCode
+   * @property {string} localDateTime
+   * @property {string} utcDateTime
+   * @property {string} stationId
+   * @typedef {import('../../types.d.ts').TidalEvent & EventRelations} RelatableTidalEvent
+   */
+
+  /**
+   * Inserts tidal event data into the tidal_event table.
+   * @param {RelatableTidalEvent[]} eventData
+   */
+  async insertTidalEventData(eventData) {
+    for (const event of eventData) {
+      await this.#db.run(
+        `INSERT INTO tidal_event (id, station_code, local_date_time, utc_date_time, level, type, station_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+        event.id,
+        event.stationCode,
+        event.localDateTime,
+        event.utcDateTime,
+        event.level,
+        event.type,
+        event.stationId
+      );
+    }
+  }
+
   /** @typedef {import('../../types.d.ts').TideStation} TideStation */
   /**
    * Inserts tide station data into the tide_station table.
@@ -96,7 +144,7 @@ export class Database {
 
   /**
    * Retrieves all tide station data from the tide_station table.
-   * @returns {Promise<Array<Object>>} A promise that resolves to an array of tide station data objects.
+   * @returns {Promise<Array<TideStation>>} A promise that resolves to an array of tide station data objects.
    */
   async getTideStationData() {
     const rows = await this.#db.all("SELECT * FROM tide_station");
