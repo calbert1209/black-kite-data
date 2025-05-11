@@ -1,8 +1,13 @@
-// @ts-check
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import fs from "fs";
 import path from "path";
+import { v4 as uuid } from "uuid";
+
+/**
+ * @typedef {import('../../types.d.ts').RowDateTime} RowDateTime
+ * @typedef {import('../../types.d.ts').TidalEvent} TidalEvent
+ */
 
 /**
  * Database class for managing SQLite database operations.
@@ -79,43 +84,52 @@ export class Database {
     return this.#db.exec(`
         CREATE TABLE IF NOT EXISTS tidal_event (
           id TEXT PRIMARY KEY,
-          station_code TEXT,
           local_date_time TEXT,
           utc_date_time TEXT,
           level INTEGER,
           type TEXT,
+          station_id TEXT,
           FOREIGN KEY (station_id) REFERENCES tide_station (id)
         );
       `);
   }
 
   /**
-   * @typedef {Object} EventRelations
-   * @property {string} id
-   * @property {string} stationCode
-   * @property {string} localDateTime
-   * @property {string} utcDateTime
-   * @property {string} stationId
-   * @typedef {import('../../types.d.ts').TidalEvent & EventRelations} RelatableTidalEvent
-   */
-
-  /**
    * Inserts tidal event data into the tidal_event table.
-   * @param {RelatableTidalEvent[]} eventData
+   * @param {TidalEvent[]} eventData
+   *
+   * @param {string} stationId - The tide station's DB ID.
    */
-  async insertTidalEventData(eventData) {
-    for (const event of eventData) {
-      await this.#db.run(
-        `INSERT INTO tidal_event (id, station_code, local_date_time, utc_date_time, level, type, station_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
-        event.id,
-        event.stationCode,
-        event.localDateTime,
-        event.utcDateTime,
-        event.level,
-        event.type,
-        event.stationId
-      );
+  async insertTidalEventData(eventData, stationId) {
+    let currentDateTime = null;
+    for (const { localDateTime, level, type } of eventData) {
+      currentDateTime = localDateTime;
+      try {
+        const utcDateTime = new Date(
+          localDateTime.year,
+          localDateTime.month - 1,
+          localDateTime.day,
+          localDateTime.hour,
+          localDateTime.minute
+        ).toISOString();
+        const localDateTimeString = createLocalDateTimeString(
+          localDateTime,
+          JST_OFFSET
+        );
+        await this.#db.run(
+          `INSERT INTO tidal_event (id, local_date_time, utc_date_time, level, type, station_id)
+           VALUES (?, ?, ?, ?, ?, ?);`,
+          uuid(),
+          localDateTimeString,
+          utcDateTime,
+          level,
+          type,
+          stationId
+        );
+      } catch (error) {
+        console.error(error, "for date:", JSON.stringify(currentDateTime));
+        continue; // Skip this entry and continue with the next one
+      }
     }
   }
 
@@ -164,3 +178,24 @@ export class Database {
     }));
   }
 }
+
+/**
+ * Creates a local date-time string in the format "YYYY-MM-DDTHH:MM:SS±HH:MM", per ISO 8601.
+ *
+ * @param {RowDateTime} dateTime - The date and time components.
+ *
+ * @param {number} offsetHours - The time zone offset in hours.
+ *
+ * @returns {string} The formatted local date-time string.
+ */
+function createLocalDateTimeString(
+  { year, month, day, hour, minute },
+  offsetHours
+) {
+  const valence = offsetHours > 0 ? "+" : "-";
+  const offsetMinutes = (offsetHours * 60) % 60;
+  const offset = `${offsetHours}:${offsetMinutes.toString().padStart(2, "0")}`;
+  return `${year}-${month}-${day}T${hour}:${minute}:00${valence}${offset}`;
+}
+
+const JST_OFFSET = 9; // Japan Standard Time (UTC+9)
