@@ -1,3 +1,4 @@
+// @ts-check
 import axios from "axios";
 import * as cheerio from "cheerio";
 import { v4 as uuid } from "uuid";
@@ -21,14 +22,19 @@ function parseDegreesMinutes(degreesMinutes) {
   };
 }
 
+/** @typedef {import('../../types.d.ts').TideStation} TideStation */
 /**
  * Fetches tide station data from the JMA website.
  * @returns {Promise<TideStation[]>} A promise that resolves to an array of tide station data objects.
  */
-export async function fetchTideStationData() {
+export async function parseTideStationData() {
   const response = await axios.get(STATION_PAGE_URL);
   const $ = cheerio.load(response.data);
+  // cspell:ignore domhandler
+  /** @typedef {import("domhandler").Element} DOMElement */
+  /** @type (cell: DOMElement) => string */
   const getTextFromCell = (cell) => $(cell).text().trim();
+  /** @type {Array<TideStation>} */
   const data = [];
 
   // Assuming the table rows are within a specific table

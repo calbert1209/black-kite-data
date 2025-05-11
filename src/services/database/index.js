@@ -1,3 +1,4 @@
+// @ts-check
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import fs from "fs";
@@ -9,7 +10,6 @@ import path from "path";
 export class Database {
   /**
    * @type {import('sqlite').Database}
-   * @private
    */
   #db;
 
@@ -71,6 +71,7 @@ export class Database {
     `);
   }
 
+  /** @typedef {import('../../types.d.ts').TideStation} TideStation */
   /**
    * Inserts tide station data into the tide_station table.
    * @param {TideStation[]} data - An array of tide station data objects.
