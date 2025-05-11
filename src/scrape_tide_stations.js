@@ -1,11 +1,13 @@
 // @ts-check
 import { parseTideStationData } from "./services/parse/tide_stations.js";
 import { Database } from "./services/database/index.js";
+import { fetchTideStationData } from "./services/fetch/index.js";
 
 (async () => {
   let db;
   try {
-    const tideStationData = await parseTideStationData();
+    const tideStationPageData = await fetchTideStationData();
+    const tideStationData = await parseTideStationData(tideStationPageData);
 
     db = await Database.init("tidal_data.db");
     await db.createTideStationTable();
