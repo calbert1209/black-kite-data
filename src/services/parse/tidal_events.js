@@ -1,4 +1,12 @@
 /**
+ * @typedef { import('../../types.d.ts').RowDate } RowDate
+ *
+ * @typedef { import('../../types.d.ts').RowDateTime } RowDateTime
+ *
+ * @typedef {import('../../types.d.ts').TidalEvent} TidalEvent
+ */
+
+/**
  * Parse hourly level measurements from row of table data.
  *
  * @param { string } row line of data from table to parse.
@@ -16,20 +24,6 @@ function parseHourlyData(row) {
 
   return output;
 }
-
-/**
- * @typedef { Object } RowDate
- * @property { number } year
- * @property { number } month (1-12)
- * @property { number } day
- *
- * @typedef { RowDate } RowDateTime
- * @property { number } year
- * @property { number } month (1-12)
- * @property { number } day
- * @property { number } hour (0-23)
- * @property { number } minutes (0-59)
- */
 
 /**
  * Parse date from row of table data.
@@ -68,20 +62,7 @@ function parseStationCode(row) {
  * A bare extremum object without any station code or type information.
  * @typedef { Object } BareExtremum
  * @property { number } hour hour measurement
- * @property { number } minutes minutes measurement
- * @property { number } level in cm
- *
- * A full extremum object with station code and type information.
- * @typedef { Object } Extremum
- * @property { RowDateTime } local_time
- * @property { string } station_code
- * @property { number } level in cm
- * @property { string } type "high" or "low"
- *
- * An hourly level object with station code and time information.
- * @typedef { Object } HourlyLevel
- * @property { RowDateTime } local_time
- * @property { string } station_code
+ * @property { number } minute minutes measurement
  * @property { number } level in cm
  */
 
@@ -104,7 +85,7 @@ function parseExtrema(row, start) {
         const level = rawData.substring(c + 4, c + 7);
         return {
           hour: parseInt(hText, 10),
-          minutes: parseInt(mText, 10),
+          minute: parseInt(mText, 10),
           level: parseInt(level, 10),
         };
       })
@@ -116,8 +97,8 @@ function parseExtrema(row, start) {
 /**
  * Results of parsing a JMA tide table.
  * @typedef {Object} ParsedTableData
- * @property { HourlyLevel[] } hourlyLevels
- * @property { Extremum[] } extrema
+ * @property { TidalEvent[] } hourlyLevels
+ * @property { TidalEvent[] } extrema
  */
 
 /**
@@ -126,29 +107,31 @@ function parseExtrema(row, start) {
  * @returns {ParsedTableData} Parsed data containing hourly levels and extrema.
  */
 export function parseTidalEvents(table) {
-  /** @type {HourlyLevel[]} */
+  /** @type {TidalEvent[]} */
   const hourlyLevels = [];
-  /** @type {Extremum[]} */
+  /** @type {TidalEvent[]} */
   const extrema = [];
 
   const rows = table.split("\n");
   for (let row of rows) {
     const { year, month, day } = parseDate(row);
-    const station_code = parseStationCode(row);
+    const stationCode = parseStationCode(row);
     const hourlyData = parseHourlyData(row);
 
     hourlyData.forEach((level, index) => {
-      const local_time = { year, month, day, hour: index, minutes: 0 };
-      const levelData = { local_time, station_code, level };
+      const localDateTime = { year, month, day, hour: index, minute: 0 };
+      /** @type {TidalEvent} */
+      const levelData = { localDateTime, stationCode, level, type: "hourly" };
       hourlyLevels.push(levelData);
     });
 
     // Parse high tide events
-    parseExtrema(row, 80).forEach(({ hour, minutes, level }) => {
-      const local_time = { year, month, day, hour, minutes };
+    parseExtrema(row, 80).forEach(({ hour, minute, level }) => {
+      const localDateTime = { year, month, day, hour, minute };
+      /** @type {TidalEvent} */
       const extremum = {
-        local_time,
-        station_code,
+        localDateTime,
+        stationCode,
         level,
         type: "high",
       };
@@ -157,11 +140,12 @@ export function parseTidalEvents(table) {
     });
 
     // Parse low tide events
-    parseExtrema(row, 108).forEach(({ hour, minutes, level }) => {
-      const local_time = { year, month, day, hour, minutes };
+    parseExtrema(row, 108).forEach(({ hour, minute, level }) => {
+      const localDateTime = { year, month, day, hour, minute };
+      /** @type {TidalEvent} */
       const extremum = {
-        local_time,
-        station_code,
+        localDateTime,
+        stationCode,
         level,
         type: "low",
       };
