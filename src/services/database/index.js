@@ -144,7 +144,7 @@ export class Database {
       await this.#db.run(
         `INSERT INTO tide_station (id, jma_id, station_code, station_name, latitude_degrees, latitude_minutes, longitude_degrees, longitude_minutes)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
-        station.id,
+        uuid(),
         station.jmaId,
         station.stationCode,
         station.stationName,
@@ -157,8 +157,12 @@ export class Database {
   }
 
   /**
+   * @typedef {import('../../types.d.ts').Identified<TideStation>} IdentifiedTideStation
+   */
+
+  /**
    * Retrieves all tide station data from the tide_station table.
-   * @returns {Promise<Array<TideStation>>} A promise that resolves to an array of tide station data objects.
+   * @returns {Promise<Array<IdentifiedTideStation>>} A promise that resolves to an array of tide station data objects.
    */
   async getTideStationData() {
     const rows = await this.#db.all("SELECT * FROM tide_station");

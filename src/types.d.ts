@@ -1,5 +1,4 @@
 export type TideStation = {
-  id: string;
   jmaId: string;
   stationCode: string;
   stationName: string;
@@ -32,4 +31,8 @@ export type TidalEvent = {
   stationCode: string;
   level: number;
   type: TidalEventType;
+};
+
+export type Identified<T> = T & {
+  id: string;
 };

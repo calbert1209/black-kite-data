@@ -42,7 +42,6 @@ export async function parseTideStationData(htmlData) {
 
     const cells = $(element).find("td");
     if (cells.length > 1) {
-      const id = uuid();
       const jmaId = $(cells[0]).text().trim();
       const stationCode = getTextFromCell(cells[1]);
       const stationName = getTextFromCell(cells[2]);
@@ -53,7 +52,6 @@ export async function parseTideStationData(htmlData) {
       const longitude = parseDegreesMinutes(longitudeText);
 
       data.push({
-        id,
         jmaId,
         stationCode,
         stationName,
